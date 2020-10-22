@@ -10,14 +10,16 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:ngx-translate-intellisense.ronini"
+    "onLanguage:html",
+    "onLanguage:json",
+    "onCommand:ngx-translate-intellisense.commandUpdateTranslations"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "ngx-translate-intellisense.ronini",
-        "title": "Ronini"
+        "command": "ngx-translate-intellisense.commandUpdateTranslations",
+        "title": "Update translations (ngx-translate-intellisense)"
       }
     ]
   },
