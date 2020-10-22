@@ -7,11 +7,12 @@ In general, it lets you easily create translations and provides intellisense for
 
 ## Requirements
 
-* Requires the use of the ngx-translate package.
+- Requires the use of the ngx-translate package.
 
 ## Extension Settings
 
 The extension doesn't provide any settings
+
 <!--- * `myExtension.enable`: enable/disable this extension -->
 
 ## Known Issues

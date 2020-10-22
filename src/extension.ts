@@ -26,7 +26,7 @@ const translationsFolderName = "i18n";
 const translationFileExtension = "json";
 
 let translationFiles: string[] = [];
-let translations: unknown[] = [];
+let translations: any[] = [];
 let languages: string[] = [];
 
 function write(message: string) {
@@ -71,7 +71,7 @@ function hoverTranslations(): vscode.Disposable {
           const secondQuote = text.lastIndexOf("'");
           const key = text.substring(firstQuote + 1, secondQuote);
 
-          return new vscode.Hover(getDocumentTextForTranslation(key));
+          return new vscode.Hover(getDocumentationForTranslation(key));
         } else {
           return null;
         }
@@ -91,23 +91,22 @@ function translationCompletions(): vscode.Disposable {
       if (isNotIndexed()) {
         return null;
       } else {
-        const defaultTranslation = translations[0];
-        const items = Object.keys(defaultTranslation)
-          .map((key, index) => {
-            if (defaultTranslation.hasOwnProperty(key)) {
-              return {
-                kind: vscode.CompletionItemKind.Constant,
-                label: completionPrefix + key,
-                insertText: getTranslationTemplate(key),
-                detail: `Translation for '${key}'`,
-                documentation: getDocumentTextForTranslation(),
-              };
-            } else {
-              return null;
-            }
-          })
-          .filter((i) => i !== null);
-        return items;
+        const defaultTranslation = translations[0] as Object;
+        const items = Object.keys(defaultTranslation).map((key, index) => {
+          if (defaultTranslation.hasOwnProperty(key)) {
+            return {
+              kind: vscode.CompletionItemKind.Constant,
+              label: completionPrefix + key,
+              insertText: getTranslationTemplate(key),
+              detail: `Translation for '${key}'`,
+              documentation: getDocumentationForTranslation(key),
+            };
+          } else {
+            return null;
+          }
+        });
+
+        return items.filter((i) => i !== null) as vscode.CompletionItem[];
       }
     },
   });
@@ -204,7 +203,7 @@ function commandCreateTranslationFromSelection(): vscode.Disposable {
               .then(
                 (result) => {
                   // if key name is not null or empty
-                  if (result !== null && result?.trim() !== "") {
+                  if (result !== undefined && result?.trim() !== "") {
                     const translationsCopy = [...translations];
                     // append the translation to all translation files
                     for (let i = 0; i < translationsCopy.length; i++) {
@@ -215,8 +214,8 @@ function commandCreateTranslationFromSelection(): vscode.Disposable {
                         JSON.stringify(translation, null, 2),
                         (error) => {
                           if (error) {
-                            vscode.window.showErrorMessage(error);
-                            write(error);
+                            vscode.window.showErrorMessage(error.message);
+                            write(error.message);
                           } else {
                             // replace selection with the generated key
                             editor.edit((edit) => {
@@ -262,40 +261,44 @@ async function indexTranslations() {
   );
 }
 
-async function getTranslationFiles(): string {
+async function getTranslationFiles(): Promise<string[]> {
   try {
     write("searching workspace...");
     const folders = vscode.workspace.workspaceFolders;
-    if (folders?.length === 0) {
-      return;
+    if (folders === null || folders?.length === 0) {
+      return [];
     }
-    dirs = [];
-    for (const f of folders) {
-      await listDirectoriesRecursive(f.uri.fsPath + "/src");
-    }
-    dirs = dirs.filter((d) => {
-      return d.endsWith(translationsFolderName);
-    });
-    if (dirs.length > 0) {
-      const dir = dirs[0];
-      write(`found ${translationsFolderName} directory (${dir})...`);
-      write("searching for a translation file...");
-      let translationFiles = await listFiles(dir);
-      translationFiles = translationFiles.filter((f) => {
-        return f.endsWith("." + translationFileExtension);
+    if (folders !== undefined) {
+      dirs = [];
+      for (const f of folders) {
+        await listDirectoriesRecursive(f.uri.fsPath + "/src");
+      }
+      dirs = dirs.filter((d) => {
+        return d.endsWith(translationsFolderName);
       });
-      return translationFiles;
+      if (dirs.length > 0) {
+        const dir = dirs[0];
+        write(`found ${translationsFolderName} directory (${dir})...`);
+        write("searching for a translation file...");
+        let translationFiles = await listFiles(dir);
+        translationFiles = translationFiles.filter((f) => {
+          return f.endsWith("." + translationFileExtension);
+        });
+        return translationFiles;
+      }
     }
+    return [];
   } catch (e) {
     vscode.window.showErrorMessage(e);
     write(e);
+    return [];
   }
 }
 
-function readTranslationFile(file: string): unknown {
+function readTranslationFile(file: string): any {
   try {
     const fileBuffer = readFileSync(file);
-    const json = JSON.parse(fileBuffer);
+    const json = JSON.parse(fileBuffer as any);
     write(`read translation file contents`);
     return json;
   } catch (e) {
@@ -304,7 +307,7 @@ function readTranslationFile(file: string): unknown {
   }
 }
 
-async function listDirectoriesRecursive(dir) {
+async function listDirectoriesRecursive(dir: string) {
   const filePaths = await listFiles(dir);
   const filePathsAndIsDirectoryFlagsPromises = filePaths.map(
     async (filePath) => ({
@@ -326,12 +329,12 @@ async function listDirectoriesRecursive(dir) {
   }
 }
 
-async function listFiles(dir) {
+async function listFiles(dir: string) {
   const fileNames = await promises.readdir(dir);
   return fileNames.map((fileName) => path.join(dir, fileName));
 }
 
-function getDocumentTextForTranslation(key: string): vscode.MarkdownString {
+function getDocumentationForTranslation(key: string): vscode.MarkdownString {
   let documentationText = "Translations:  \n  ";
   for (let i = 0; i < languages.length; i++) {
     documentationText += `**${languages[i].toUpperCase()}:** ${

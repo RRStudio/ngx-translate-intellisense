@@ -3,8 +3,12 @@
   "displayName": "ngx-translate-intellisense",
   "description": "Provides easy-to-use intellisense for the ngx-translate package",
   "version": "0.0.1",
+  "publisher": "RRStudio",
   "engines": {
     "vscode": "^1.50.0"
+  },
+  "repository": {
+    "url": "https://github.com/RRStudio/ngx-translate-intellisense"
   },
   "categories": [
     "Other"
