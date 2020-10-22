@@ -343,9 +343,17 @@ function getDocumentTextForTranslation(key: string): vscode.MarkdownString {
 
 async function openTranslationFiles() {
   if (isNotIndexed()) {
+    vscode.window.showWarningMessage(
+      "Translations are not indexed yet, please wait..."
+    );
   } else {
     translationFiles.forEach(async (f) => {
-      await vscode.commands.executeCommand("vscode.open", f);
+      const uri = vscode.Uri.file(f);
+      await vscode.commands.executeCommand(
+        "vscode.open",
+        uri,
+        vscode.ViewColumn.Beside
+      );
     });
   }
 }
