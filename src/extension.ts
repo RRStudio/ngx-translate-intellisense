@@ -1,11 +1,15 @@
-import { existsSync, promises, readdir, readFile, readFileSync } from "fs";
+import {
+  existsSync,
+  promises,
+  readdir,
+  readFile,
+  readFileSync,
+  writeFile,
+} from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 
-// TODO: translated string highlighting
-// TODO: translated string show translations on hover
-// TODO: create translation of selection
-// TODO: show option to create translation of inserted string after prefix
+// TODO: simple translations editor
 
 const NAME = "ngx-translate-intellisense";
 const selector = [
@@ -38,7 +42,9 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     hoverTranslations(),
     translationCompletions(),
-    commandUpdateTranslations()
+    commandUpdateTranslations(),
+    commandCreateTranslationFromSelection(),
+    commandOpenTranslationFiles()
   );
 }
 
@@ -52,7 +58,7 @@ function hoverTranslations(): vscode.Disposable {
       position: vscode.Position,
       token: vscode.CancellationToken
     ) {
-      if (translationFiles.length === 0 || translations.length === 0) {
+      if (isNotIndexed()) {
         return new vscode.Hover("Loading translations...");
       } else {
         const foundRange = document.getWordRangeAtPosition(
@@ -82,7 +88,7 @@ function translationCompletions(): vscode.Disposable {
       token: vscode.CancellationToken,
       context: vscode.CompletionContext
     ) {
-      if (translationFiles.length === 0 || translations.length === 0) {
+      if (isNotIndexed()) {
         return null;
       } else {
         const defaultTranslation = translations[0];
@@ -92,7 +98,7 @@ function translationCompletions(): vscode.Disposable {
               return {
                 kind: vscode.CompletionItemKind.Constant,
                 label: completionPrefix + key,
-                insertText: `{{ '${key}' | translate }}`,
+                insertText: getTranslationTemplate(key),
                 detail: `Translation for '${key}'`,
                 documentation: getDocumentTextForTranslation(),
               };
@@ -109,9 +115,23 @@ function translationCompletions(): vscode.Disposable {
 
 let dirs: string[] = [];
 
+function commandOpenTranslationFiles(): vscode.Disposable {
+  return vscode.commands.registerCommand(
+    `${NAME}.openTranslationFiles`,
+    async () => {
+      try {
+        await openTranslationFiles();
+      } catch (e) {
+        vscode.window.showErrorMessage(e);
+        write(e);
+      }
+    }
+  );
+}
+
 function commandUpdateTranslations(): vscode.Disposable {
   return vscode.commands.registerCommand(
-    `${NAME}.commandUpdateTranslations`,
+    `${NAME}.updateTranslations`,
     async () => {
       try {
         vscode.window.showInformationMessage("Updating translations");
@@ -128,6 +148,102 @@ function commandUpdateTranslations(): vscode.Disposable {
           });
       } catch (e) {
         vscode.window.showErrorMessage(e);
+        write(e);
+      }
+    }
+  );
+}
+
+function commandCreateTranslationFromSelection(): vscode.Disposable {
+  return vscode.commands.registerCommand(
+    `${NAME}.createTranslationFromSelection`,
+    async () => {
+      try {
+        if (isNotIndexed()) {
+          vscode.window.showWarningMessage(
+            "Translations are not indexed yet, please wait..."
+          );
+        } else {
+          const editor = vscode.window.activeTextEditor;
+          if (editor) {
+            // get selection
+            const selectionRange = new vscode.Range(
+              editor.selection.start,
+              editor.selection.end
+            );
+            const selection = editor.document.getText(selectionRange);
+
+            // check if translation already exists
+            for (const translation of translations) {
+              for (const key in translation) {
+                if (
+                  selection.toLowerCase() === translation[key].toLowerCase()
+                ) {
+                  editor.edit((edit) => {
+                    edit.replace(selectionRange, getTranslationTemplate(key));
+                  });
+                  vscode.window.showInformationMessage(
+                    `A translation for '${selection}' already exists, so I replaced it for you :)`
+                  );
+                  return;
+                }
+              }
+            }
+
+            // key doesn't exist, ask for key name
+            vscode.window
+              .showInputBox(
+                {
+                  placeHolder: "key_name",
+                  prompt:
+                    "Please enter the translation key name. The provided key will be converted to snake_case",
+                  value: toSnakeCase(selection),
+                },
+                new vscode.CancellationTokenSource().token
+              )
+              .then(
+                (result) => {
+                  // if key name is not null or empty
+                  if (result !== null && result?.trim() !== "") {
+                    const translationsCopy = [...translations];
+                    // append the translation to all translation files
+                    for (let i = 0; i < translationsCopy.length; i++) {
+                      const translation = translationsCopy[i];
+                      translation[result] = selection;
+                      writeFile(
+                        translationFiles[i],
+                        JSON.stringify(translation, null, 2),
+                        (error) => {
+                          if (error) {
+                            vscode.window.showErrorMessage(error);
+                            write(error);
+                          } else {
+                            // replace selection with the generated key
+                            editor.edit((edit) => {
+                              edit.replace(
+                                selectionRange,
+                                getTranslationTemplate(result)
+                              );
+                            });
+                            vscode.window.showInformationMessage(
+                              `Created translation key '${result}' for '${selection}'`
+                            );
+                          }
+                        }
+                      );
+                    }
+                  }
+                },
+                (error) => {
+                  vscode.window.showErrorMessage(error);
+                  write(error);
+                }
+              );
+          }
+        }
+      } catch (e) {
+        vscode.window.showErrorMessage(e);
+        write(e);
       }
     }
   );
@@ -172,6 +288,7 @@ async function getTranslationFiles(): string {
     }
   } catch (e) {
     vscode.window.showErrorMessage(e);
+    write(e);
   }
 }
 
@@ -183,6 +300,7 @@ function readTranslationFile(file: string): unknown {
     return json;
   } catch (e) {
     vscode.window.showErrorMessage(e);
+    write(e);
   }
 }
 
@@ -221,4 +339,25 @@ function getDocumentTextForTranslation(key: string): vscode.MarkdownString {
     }  \n  `;
   }
   return new vscode.MarkdownString(documentationText);
+}
+
+async function openTranslationFiles() {
+  if (isNotIndexed()) {
+  } else {
+    translationFiles.forEach(async (f) => {
+      await vscode.commands.executeCommand("vscode.open", f);
+    });
+  }
+}
+
+function isNotIndexed(): boolean {
+  return translationFiles.length === 0 || translations.length === 0;
+}
+
+function getTranslationTemplate(key: string): string {
+  return `{{ '${key}' | translate }}`;
+}
+
+function toSnakeCase(value: string): string {
+  return value.replace("  ", " ").replace(" ", "_").toLowerCase().trim();
 }

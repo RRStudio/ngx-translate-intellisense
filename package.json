@@ -12,14 +12,24 @@
   "activationEvents": [
     "onLanguage:html",
     "onLanguage:json",
-    "onCommand:ngx-translate-intellisense.commandUpdateTranslations"
+    "onCommand:ngx-translate-intellisense.updateTranslations",
+    "onCommand:ngx-translate-intellisense.createTranslationFromSelection",
+    "ngx-translate-intellisense.openTranslationFiles"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "ngx-translate-intellisense.commandUpdateTranslations",
-        "title": "Update translations (ngx-translate-intellisense)"
+        "command": "ngx-translate-intellisense.updateTranslations",
+        "title": "Update translations"
+      },
+      {
+        "command": "ngx-translate-intellisense.createTranslationFromSelection",
+        "title": "Create translation from selection"
+      },
+      {
+        "command": "ngx-translate-intellisense.openTranslationFiles",
+        "title": "Open translation files"
       }
     ]
   },
