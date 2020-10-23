@@ -1,13 +1,16 @@
 import {
   existsSync,
+  FSWatcher,
   promises,
   readdir,
   readFile,
   readFileSync,
+  watch,
   writeFile,
 } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
+import * as md5 from "md5";
 
 // TODO: simple translations editor
 
@@ -20,14 +23,18 @@ const selector = [
 ];
 const completionPrefix = "t:";
 
-let output: vscode.OutputChannel;
-
 const translationsFolderName = "i18n";
 const translationFileExtension = "json";
 
 let translationFiles: string[] = [];
+let translationFileWatches: FSWatcher[] = [];
 let translations: any[] = [];
 let languages: string[] = [];
+
+let output: vscode.OutputChannel;
+let dirs: string[] = [];
+
+let translationsEditorWebViewPanel: vscode.WebviewPanel = null;
 
 function write(message: string) {
   output.appendLine(message);
@@ -44,7 +51,8 @@ export function activate(context: vscode.ExtensionContext) {
     translationCompletions(),
     commandUpdateTranslations(),
     commandCreateTranslationFromSelection(),
-    commandOpenTranslationFiles()
+    commandOpenTranslationFiles(),
+    commandOpenTranslationsEditor(context)
   );
 }
 
@@ -112,7 +120,196 @@ function translationCompletions(): vscode.Disposable {
   });
 }
 
-let dirs: string[] = [];
+function refreshTranslationsEditor() {
+  try {
+    translationsEditorWebViewPanel?.webview.html = getTranslationEditorContent();
+  } catch (e) {
+    write(e);
+  }
+}
+
+function commandOpenTranslationsEditor(
+  context: vscode.ExtensionContext
+): vscode.Disposable {
+  return vscode.commands.registerCommand(
+    `${NAME}.openTranslationsEditor`,
+    async () => {
+      try {
+        translationsEditorWebViewPanel = vscode.window.createWebviewPanel(
+          "translationsEditor",
+          "Translations Editor",
+          vscode.ViewColumn.One,
+          {
+            enableScripts: true,
+          }
+        );
+
+        refreshTranslationsEditor();
+
+        translationsEditorWebViewPanel.webview.onDidReceiveMessage(
+          (message) => {
+            switch (message.command) {
+              case "refresh":
+                refreshTranslationsEditor();
+                return;
+            }
+          },
+          undefined,
+          context.subscriptions
+        );
+      } catch (e) {
+        vscode.window.showErrorMessage(e);
+        write(e);
+      }
+    }
+  );
+}
+
+function translationsEditorButtons(): string {
+  return `<div style="display: flex;">
+  <button onclick="refresh()" style="margin-right: 10px;">🗘   Refresh</button>
+  <button onclick="save()">💾   Save</button>
+  </div>`;
+}
+
+function translationsEditorHead(): string {
+  return `<thead><tr>
+<th>#</th>
+${languages
+  .map((lang) => {
+    return `<th>${lang.toUpperCase()}</th>`;
+  })
+  .join("")}</tr>
+</thead>`;
+}
+
+function translationsEditorBody(): string {
+  const translationTable = {};
+  translations.forEach((t) => {
+    Object.keys(t).forEach((k) => {
+      if (translationTable[k] === undefined) {
+        translationTable[k] = [];
+      }
+      translationTable[k].push(t[k]);
+    });
+  });
+
+  Object.keys(translationTable).forEach((k) => {
+    for (let i = 0; i < languages.length - translationTable[k].length; i++) {
+      translationTable[k].push("");
+    }
+  });
+
+  return `<tbody>
+${Object.keys(translationTable)
+  .map((k) => {
+    return `<tr><td>${k}</td>${(translationTable[k] as string[])
+      .map((t) => {
+        return `<td><input class="${
+          t === "" ? "empty" : ""
+        }" value="${t}"/></td>`;
+      })
+      .join("")}</tr>`;
+  })
+  .join("")}
+</tbody>`;
+}
+
+function translationsEditorScript(): string {
+  return `<script>
+  function refresh() {
+      const vscode = acquireVsCodeApi();
+      vscode.postMessage({
+          command: 'refresh'
+      })
+  }
+</script>`;
+}
+
+function translationsEditorStyle(): string {
+  return `<style>
+  body {
+    padding: 20px;
+  }
+
+  button {
+    background: transparent;
+    border-color: 1px solid #fff;
+    color: #fff;
+    padding: 0px 5px;
+  }
+  
+  button:hover {
+    background: #232323;
+  }
+
+  input{
+    width: 99%;
+    background: transparent;
+    color: #CCCCCC;
+    font-size: 12px;
+  }
+  input.empty {
+    background: #91293a
+  }
+  input:focus {
+    color: #FFFFFF;
+  }
+
+  table {
+    width: 100%;
+    text-align: left;
+    border-collapse: collapse;
+  }
+  table td, table th {
+    border: 1px solid #AAAAAA;
+    padding: 2px 4px;
+  }
+  table tbody td {
+    font-size: 12px;
+  }
+  table tr:nth-child(even) {
+    background: rgba(#000, 0.5);
+  }
+  table thead {
+    border-bottom: 2px solid #AAAAAA;
+  }
+  table thead th {
+    font-size: 12px;
+    font-weight: bold;
+    color: #FFFFFF;
+    text-align: left;
+    border-left: 2px solid #AAAAAA;
+  }
+  table thead th:first-child {
+    border-left: none;
+  }
+</style>`;
+}
+
+function getTranslationEditorContent() {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Translations editor</title>
+    ${translationsEditorStyle()}
+</head>
+<body>
+${
+  isNotIndexed()
+    ? "Indexing translations..."
+    : `${translationsEditorButtons()}<br/><br/>
+    <table>
+${translationsEditorHead()}
+${translationsEditorBody()}
+</table>`
+}
+${translationsEditorScript()}
+</body>
+</html>`;
+}
 
 function commandOpenTranslationFiles(): vscode.Disposable {
   return vscode.commands.registerCommand(
@@ -248,9 +445,38 @@ function commandCreateTranslationFromSelection(): vscode.Disposable {
   );
 }
 
+function watchTranslationFileChanges() {
+  translationFileWatches.forEach((t) => {
+    t.close();
+  });
+  let md5Previous = null;
+  let fsWait = false;
+  translationFileWatches = translationFiles.map((f) => {
+    return watch(f, (event, filename) => {
+      if (filename) {
+        if (fsWait) {
+          return;
+        }
+        fsWait = setTimeout(() => {
+          fsWait = false;
+        }, 100);
+        const md5Current = md5(readFileSync(f));
+        if (md5Current === md5Previous) {
+          return;
+        }
+        md5Previous = md5Current;
+        indexTranslations()
+          .then((result) => {})
+          .catch((error) => {});
+      }
+    });
+  });
+}
+
 async function indexTranslations() {
   translations = [];
   translationFiles = await getTranslationFiles();
+  watchTranslationFileChanges();
   languages = translationFiles.map((f) => {
     return path.basename(f, "." + translationFileExtension);
   });
@@ -259,6 +485,10 @@ async function indexTranslations() {
       return readTranslationFile(f);
     })
   );
+
+  if (!isNotIndexed()) {
+    refreshTranslationsEditor();
+  }
 }
 
 async function getTranslationFiles(): Promise<string[]> {
