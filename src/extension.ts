@@ -26,8 +26,6 @@ export let languages: string[] = [];
 
 let dirs: string[] = [];
 
-let translationsEditorWebViewPanel: vscode.WebviewPanel = null;
-
 export function activate(context: vscode.ExtensionContext) {
   util.initOutput();
   indexTranslations()
@@ -137,14 +135,6 @@ function translationCompletions(): vscode.Disposable {
       },
     }
   );
-}
-
-function refreshTranslationsEditor() {
-  try {
-    translationsEditorWebViewPanel?.webview.html = getTranslationEditorContent();
-  } catch (e) {
-    util.write(e);
-  }
 }
 
 let lastFocus = null;
@@ -343,7 +333,6 @@ async function indexTranslations() {
 
   if (!isNotIndexed()) {
     translationsEditor.refresh();
-    //refreshTranslationsEditor();
     if (vscode.window.activeTextEditor) {
       diagnostics.run(vscode.window.activeTextEditor.document);
     }
