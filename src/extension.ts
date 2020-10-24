@@ -11,14 +11,9 @@ import {
 import * as path from "path";
 import * as vscode from "vscode";
 import * as md5 from "md5";
-import {
-  PACKAGE_NAME,
-  REGEXP_TRANSLATE_PIPE,
-  COMPLETION_ITEM_PREFIX,
-  FILE_SELECTOR,
-} from "./constants";
-import { SETTINGS_FOLDER_NAME, SETTINGS_FILE_EXTENSION } from "./settings";
-import { diagnose, initDiagnostics } from "./diagnostics";
+import * as constants from "./constants";
+import * as settings from "./settings";
+import * as diagnostics from "./diagnostics";
 
 // TODO: refactor
 
@@ -37,12 +32,12 @@ function write(message: string) {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-  output = vscode.window.createOutputChannel(PACKAGE_NAME);
+  output = vscode.window.createOutputChannel(constants.PACKAGE_NAME);
   indexTranslations()
     .then((result) => {})
     .catch((error) => {});
 
-  const diagnosticCollection = initDiagnostics();
+  const diagnosticCollection = diagnostics.init();
   subscribeToDocumentChanges(context);
 
   context.subscriptions.push(
@@ -61,30 +56,30 @@ export function deactivate() {}
 
 function subscribeToDocumentChanges(context: vscode.ExtensionContext) {
   if (vscode.window.activeTextEditor) {
-    diagnose(vscode.window.activeTextEditor.document);
+    diagnostics.run(vscode.window.activeTextEditor.document);
   }
 
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (editor) {
-        diagnose(editor.document);
+        diagnostics.run(editor.document);
       }
     })
   );
 
   context.subscriptions.push(
-    vscode.workspace.onDidChangeTextDocument((e) => diagnose(e.document))
+    vscode.workspace.onDidChangeTextDocument((e) => diagnostics.run(e.document))
   );
 
   context.subscriptions.push(
     vscode.workspace.onDidCloseTextDocument((doc) =>
-      diagnosticCollection.delete(doc.uri)
+      diagnostics.deleteDocument(doc)
     )
   );
 }
 
 function hoverTranslations(): vscode.Disposable {
-  return vscode.languages.registerHoverProvider(FILE_SELECTOR, {
+  return vscode.languages.registerHoverProvider(constants.FILE_SELECTOR, {
     provideHover(
       document: vscode.TextDocument,
       position: vscode.Position,
@@ -95,7 +90,7 @@ function hoverTranslations(): vscode.Disposable {
       } else {
         const foundRange = document.getWordRangeAtPosition(
           position,
-          REGEXP_TRANSLATE_PIPE
+          constants.REGEXP_TRANSLATE_PIPE
         );
         if (foundRange !== undefined) {
           const text = document.getText(foundRange);
@@ -113,35 +108,38 @@ function hoverTranslations(): vscode.Disposable {
 }
 
 function translationCompletions(): vscode.Disposable {
-  return vscode.languages.registerCompletionItemProvider(FILE_SELECTOR, {
-    provideCompletionItems(
-      document: vscode.TextDocument,
-      position: vscode.Position,
-      token: vscode.CancellationToken,
-      context: vscode.CompletionContext
-    ) {
-      if (isNotIndexed()) {
-        return null;
-      } else {
-        const defaultTranslation = translations[0] as Object;
-        const items = Object.keys(defaultTranslation).map((key, index) => {
-          if (defaultTranslation.hasOwnProperty(key)) {
-            return {
-              kind: vscode.CompletionItemKind.Constant,
-              label: COMPLETION_ITEM_PREFIX + key,
-              insertText: getTranslationTemplate(key),
-              detail: `Translation for '${key}'`,
-              documentation: getDocumentationForTranslation(key),
-            };
-          } else {
-            return null;
-          }
-        });
+  return vscode.languages.registerCompletionItemProvider(
+    constants.FILE_SELECTOR,
+    {
+      provideCompletionItems(
+        document: vscode.TextDocument,
+        position: vscode.Position,
+        token: vscode.CancellationToken,
+        context: vscode.CompletionContext
+      ) {
+        if (isNotIndexed()) {
+          return null;
+        } else {
+          const defaultTranslation = translations[0] as Object;
+          const items = Object.keys(defaultTranslation).map((key, index) => {
+            if (defaultTranslation.hasOwnProperty(key)) {
+              return {
+                kind: vscode.CompletionItemKind.Constant,
+                label: constants.COMPLETION_ITEM_PREFIX + key,
+                insertText: getTranslationTemplate(key),
+                detail: `Translation for '${key}'`,
+                documentation: getDocumentationForTranslation(key),
+              };
+            } else {
+              return null;
+            }
+          });
 
-        return items.filter((i) => i !== null) as vscode.CompletionItem[];
-      }
-    },
-  });
+          return items.filter((i) => i !== null) as vscode.CompletionItem[];
+        }
+      },
+    }
+  );
 }
 
 function refreshTranslationsEditor() {
@@ -158,7 +156,7 @@ function commandOpenTranslationsEditor(
   context: vscode.ExtensionContext
 ): vscode.Disposable {
   return vscode.commands.registerCommand(
-    `${PACKAGE_NAME}.openTranslationsEditor`,
+    `${constants.PACKAGE_NAME}.openTranslationsEditor`,
     async () => {
       try {
         translationsEditorWebViewPanel = vscode.window.createWebviewPanel(
@@ -285,8 +283,8 @@ ${Object.keys(translationTable)
 function translationsEditorRefocusScript() {
   return lastFocus !== null
     ? `<script> 
-  const FILE_SELECTOR = '#${lastFocus.key}[name="${lastFocus.langIndex}"]'
-  document.querySelector(FILE_SELECTOR).focus()
+  const constants.FILE_SELECTOR = '#${lastFocus.key}[name="${lastFocus.langIndex}"]'
+  document.querySelector(constants.FILE_SELECTOR).focus()
   </script>`
     : "";
 }
@@ -426,7 +424,7 @@ ${translationsEditorScript()}
 
 function commandOpenTranslationFiles(): vscode.Disposable {
   return vscode.commands.registerCommand(
-    `${PACKAGE_NAME}.openTranslationFiles`,
+    `${constants.PACKAGE_NAME}.openTranslationFiles`,
     async () => {
       try {
         await openTranslationFiles();
@@ -440,7 +438,7 @@ function commandOpenTranslationFiles(): vscode.Disposable {
 
 function commandUpdateTranslations(): vscode.Disposable {
   return vscode.commands.registerCommand(
-    `${PACKAGE_NAME}.updateTranslations`,
+    `${constants.PACKAGE_NAME}.updateTranslations`,
     async () => {
       try {
         vscode.window.showInformationMessage("Updating translations");
@@ -465,7 +463,7 @@ function commandUpdateTranslations(): vscode.Disposable {
 
 function commandCreateTranslationFromSelection(): vscode.Disposable {
   return vscode.commands.registerCommand(
-    `${PACKAGE_NAME}.createTranslationFromSelection`,
+    `${constants.PACKAGE_NAME}.createTranslationFromSelection`,
     async () => {
       try {
         if (isNotIndexed()) {
@@ -594,7 +592,7 @@ async function indexTranslations() {
   translationFiles = await getTranslationFiles();
   watchTranslationFileChanges();
   languages = translationFiles.map((f) => {
-    return path.basename(f, "." + SETTINGS_FILE_EXTENSION);
+    return path.basename(f, "." + settings.FILE_EXTENSION);
   });
   translations = await Promise.all(
     translationFiles.map((f) => {
@@ -605,7 +603,7 @@ async function indexTranslations() {
   if (!isNotIndexed()) {
     refreshTranslationsEditor();
     if (vscode.window.activeTextEditor) {
-      diagnose(vscode.window.activeTextEditor.document);
+      diagnostics.run(vscode.window.activeTextEditor.document);
     }
   }
 }
@@ -623,15 +621,15 @@ async function getTranslationFiles(): Promise<string[]> {
         await listDirectoriesRecursive(f.uri.fsPath + "/src");
       }
       dirs = dirs.filter((d) => {
-        return d.endsWith(SETTINGS_FOLDER_NAME);
+        return d.endsWith(settings.FOLDER_NAME);
       });
       if (dirs.length > 0) {
         const dir = dirs[0];
-        write(`found ${SETTINGS_FOLDER_NAME} directory (${dir})...`);
+        write(`found ${settings.FOLDER_NAME} directory (${dir})...`);
         write("searching for a translation file...");
         let translationFiles = await listFiles(dir);
         translationFiles = translationFiles.filter((f) => {
-          return f.endsWith("." + SETTINGS_FILE_EXTENSION);
+          return f.endsWith("." + settings.FILE_EXTENSION);
         });
         return translationFiles;
       }
