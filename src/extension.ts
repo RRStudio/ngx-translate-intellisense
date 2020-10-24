@@ -12,7 +12,8 @@ import * as path from "path";
 import * as vscode from "vscode";
 import * as md5 from "md5";
 
-// TODO: simple translations editor
+// TODO: translations editor - auto focus last entry
+// TODO: translations editor - delete entry
 // TODO: add problem for each key that isn't translated
 // TODO: highlight translate string pipe that is invalid (no such key error)
 
@@ -130,6 +131,8 @@ function refreshTranslationsEditor() {
   }
 }
 
+let lastFocus = null;
+
 function commandOpenTranslationsEditor(
   context: vscode.ExtensionContext
 ): vscode.Disposable {
@@ -150,19 +153,29 @@ function commandOpenTranslationsEditor(
 
         translationsEditorWebViewPanel.webview.onDidReceiveMessage(
           (message) => {
-            switch (message.command) {
+            const { command, key, langIndex, value } = message;
+            switch (command) {
               case "refresh":
                 refreshTranslationsEditor();
-                return;
+                break;
               case "change":
-                const { key, langIndex, value } = message;
                 // if value is new
                 if (translations[langIndex][key] !== value) {
                   // write change
                   translations[langIndex][key] = value;
                   writeChanges(translations, () => {});
                 }
-                return;
+                break;
+              case "focus":
+                lastFocus = { key, langIndex: +langIndex };
+                break;
+              case "new":
+                // append the translation to all translation files
+                for (let i = 0; i < translations.length; i++) {
+                  translations[i]["__temp"] = "";
+                }
+                writeChanges(translations, () => {});
+                break;
             }
           },
           undefined,
@@ -216,14 +229,33 @@ ${Object.keys(translationTable)
     return `<tr><td>${key}</td>${(translationTable[key] as string[])
       .map((t, iLang) => {
         return `<td><input id="${key}" name="${iLang}"
-        onblur="onInputBlur(event)" 
+        onblur="onInputBlur(event)"
+        onfocus="onInputFocus(event)"
         class="${t === "" ? "empty" : ""}" 
-        value="${t}"/></td>`;
+        value="${t}"
+        ${
+          lastFocus !== null &&
+          lastFocus.key === key &&
+          lastFocus.langIndex === iLang
+            ? "autofocus"
+            : ""
+        }
+        /></td>`;
       })
       .join("")}</tr>`;
   })
   .join("")}
+  ${translationsEditorRefocusScript()}
 </tbody>`;
+}
+
+function translationsEditorRefocusScript() {
+  return lastFocus !== null
+    ? `<script> 
+  const selector = '#${lastFocus.key}[name="${lastFocus.langIndex}"]'
+  document.querySelector(selector).focus()
+  </script>`
+    : "";
 }
 
 function translationsEditorScript(): string {
@@ -242,6 +274,18 @@ function translationsEditorScript(): string {
         value: e.target.value
     })
   }
+  function onInputFocus(e) {
+    vscode.postMessage({
+        command: 'focus',
+        key: e.target.id,
+        langIndex: e.target.name,
+    })
+  }
+  function addNew() {
+    vscode.postMessage({
+        command: 'new'
+    })
+  }
 </script>`;
 }
 
@@ -256,6 +300,7 @@ function translationsEditorStyle(): string {
     border-color: 1px solid #fff;
     color: #fff;
     padding: 0px 5px;
+    height: 30px;
   }
   
   button:hover {
@@ -324,7 +369,8 @@ ${
     <table>
 ${translationsEditorHead()}
 ${translationsEditorBody()}
-</table>`
+</table>
+<button onclick="addNew()" style="margin-top: 10px; width: 100%">+   New</button>`
 }
 ${translationsEditorScript()}
 </body>
