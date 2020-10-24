@@ -1,19 +1,24 @@
 import * as vscode from "vscode";
-import { translations, languages, writeChanges } from "./extension";
+import {
+  translations,
+  languages,
+  writeChanges,
+  isNotIndexed,
+} from "./extension";
+import * as util from "./util";
 
 let translationsEditorWebViewPanel: vscode.WebviewPanel = null;
+let lastFocus = null;
 
-function refresh() {
+export function refresh() {
   try {
     translationsEditorWebViewPanel?.webview.html = getTranslationEditorContent();
   } catch (e) {
-    write(e);
+    util.write(e);
   }
 }
 
-let lastFocus = null;
-
-export function open(context: vscode.ExtensionContext): vscode.Disposable {
+export function open(context: vscode.ExtensionContext) {
   try {
     translationsEditorWebViewPanel = vscode.window.createWebviewPanel(
       "translationsEditor",
@@ -63,7 +68,7 @@ export function open(context: vscode.ExtensionContext): vscode.Disposable {
     );
   } catch (e) {
     vscode.window.showErrorMessage(e);
-    write(e);
+    util.write(e);
   }
 }
 
