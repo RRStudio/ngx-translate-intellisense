@@ -14,6 +14,8 @@ import * as md5 from "md5";
 import * as constants from "./constants";
 import * as settings from "./settings";
 import * as diagnostics from "./diagnostics";
+import * as util from "./util";
+import * as translationsEditor from "./translationsEditor";
 
 // TODO: refactor
 
@@ -22,17 +24,12 @@ export let translationFileWatches: FSWatcher[] = [];
 export let translations: any[] = [];
 export let languages: string[] = [];
 
-let output: vscode.OutputChannel;
 let dirs: string[] = [];
 
 let translationsEditorWebViewPanel: vscode.WebviewPanel = null;
 
-function write(message: string) {
-  output.appendLine(message);
-}
-
 export function activate(context: vscode.ExtensionContext) {
-  output = vscode.window.createOutputChannel(constants.PACKAGE_NAME);
+  util.initOutput();
   indexTranslations()
     .then((result) => {})
     .catch((error) => {});
@@ -126,7 +123,7 @@ function translationCompletions(): vscode.Disposable {
               return {
                 kind: vscode.CompletionItemKind.Constant,
                 label: constants.COMPLETION_ITEM_PREFIX + key,
-                insertText: getTranslationTemplate(key),
+                insertText: util.getTranslationTemplate(key),
                 detail: `Translation for '${key}'`,
                 documentation: getDocumentationForTranslation(key),
               };
@@ -146,7 +143,7 @@ function refreshTranslationsEditor() {
   try {
     translationsEditorWebViewPanel?.webview.html = getTranslationEditorContent();
   } catch (e) {
-    write(e);
+    util.write(e);
   }
 }
 
@@ -210,7 +207,7 @@ function commandOpenTranslationsEditor(
         );
       } catch (e) {
         vscode.window.showErrorMessage(e);
-        write(e);
+        util.write(e);
       }
     }
   );
@@ -430,7 +427,7 @@ function commandOpenTranslationFiles(): vscode.Disposable {
         await openTranslationFiles();
       } catch (e) {
         vscode.window.showErrorMessage(e);
-        write(e);
+        util.write(e);
       }
     }
   );
@@ -455,7 +452,7 @@ function commandUpdateTranslations(): vscode.Disposable {
           });
       } catch (e) {
         vscode.window.showErrorMessage(e);
-        write(e);
+        util.write(e);
       }
     }
   );
@@ -487,7 +484,10 @@ function commandCreateTranslationFromSelection(): vscode.Disposable {
                   selection.toLowerCase() === translation[key].toLowerCase()
                 ) {
                   editor.edit((edit) => {
-                    edit.replace(selectionRange, getTranslationTemplate(key));
+                    edit.replace(
+                      selectionRange,
+                      util.getTranslationTemplate(key)
+                    );
                   });
                   vscode.window.showInformationMessage(
                     `A translation for '${selection}' already exists, so I replaced it for you :)`
@@ -504,7 +504,7 @@ function commandCreateTranslationFromSelection(): vscode.Disposable {
                   placeHolder: "key_name",
                   prompt:
                     "Please enter the translation key name. The provided key will be converted to snake_case",
-                  value: toSnakeCase(selection),
+                  value: util.toSnakeCase(selection),
                 },
                 new vscode.CancellationTokenSource().token
               )
@@ -524,7 +524,7 @@ function commandCreateTranslationFromSelection(): vscode.Disposable {
                       editor.edit((edit) => {
                         edit.replace(
                           selectionRange,
-                          getTranslationTemplate(result)
+                          util.getTranslationTemplate(result)
                         );
                       });
                       vscode.window
@@ -546,14 +546,14 @@ function commandCreateTranslationFromSelection(): vscode.Disposable {
                 },
                 (error) => {
                   vscode.window.showErrorMessage(error);
-                  write(error);
+                  util.write(error);
                 }
               );
           }
         }
       } catch (e) {
         vscode.window.showErrorMessage(e);
-        write(e);
+        util.write(e);
       }
     }
   );
@@ -610,7 +610,7 @@ async function indexTranslations() {
 
 async function getTranslationFiles(): Promise<string[]> {
   try {
-    write("searching workspace...");
+    util.write("searching workspace...");
     const folders = vscode.workspace.workspaceFolders;
     if (folders === null || folders?.length === 0) {
       return [];
@@ -625,8 +625,8 @@ async function getTranslationFiles(): Promise<string[]> {
       });
       if (dirs.length > 0) {
         const dir = dirs[0];
-        write(`found ${settings.FOLDER_NAME} directory (${dir})...`);
-        write("searching for a translation file...");
+        util.write(`found ${settings.FOLDER_NAME} directory (${dir})...`);
+        util.write("searching for a translation file...");
         let translationFiles = await listFiles(dir);
         translationFiles = translationFiles.filter((f) => {
           return f.endsWith("." + settings.FILE_EXTENSION);
@@ -637,7 +637,7 @@ async function getTranslationFiles(): Promise<string[]> {
     return [];
   } catch (e) {
     vscode.window.showErrorMessage(e);
-    write(e);
+    util.write(e);
     return [];
   }
 }
@@ -646,11 +646,11 @@ function readTranslationFile(file: string): any {
   try {
     const fileBuffer = readFileSync(file);
     const json = JSON.parse(fileBuffer as any);
-    write(`read translation file contents`);
+    util.write(`read translation file contents`);
     return json;
   } catch (e) {
     vscode.window.showErrorMessage(e);
-    write(e);
+    util.write(e);
   }
 }
 
@@ -712,15 +712,7 @@ export function isNotIndexed(): boolean {
   return translationFiles.length === 0 || translations.length === 0;
 }
 
-function getTranslationTemplate(key: string): string {
-  return `{{ '${key}' | translate }}`;
-}
-
-function toSnakeCase(value: string): string {
-  return value.replace("  ", " ").replace(" ", "_").toLowerCase().trim();
-}
-
-function writeChanges(changes: any[], onComplete: () => void) {
+export function writeChanges(changes: any[], onComplete: () => void) {
   for (let i = 0; i < changes.length; i++) {
     writeFile(
       translationFiles[i],
@@ -728,7 +720,7 @@ function writeChanges(changes: any[], onComplete: () => void) {
       (error) => {
         if (error) {
           vscode.window.showErrorMessage(error.message);
-          write(error.message);
+          util.write(error.message);
         } else {
           onComplete();
         }
