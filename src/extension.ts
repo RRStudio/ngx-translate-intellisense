@@ -13,6 +13,8 @@ import * as vscode from "vscode";
 import * as md5 from "md5";
 
 // TODO: simple translations editor
+// TODO: add problem for each key that isn't translated
+// TODO: highlight translate string pipe that is invalid (no such key error)
 
 const NAME = "ngx-translate-intellisense";
 const selector = [
@@ -152,6 +154,9 @@ function commandOpenTranslationsEditor(
               case "refresh":
                 refreshTranslationsEditor();
                 return;
+              case "change":
+                vscode.window.showInformationMessage("change");
+                return;
             }
           },
           undefined,
@@ -168,7 +173,6 @@ function commandOpenTranslationsEditor(
 function translationsEditorButtons(): string {
   return `<div style="display: flex;">
   <button onclick="refresh()" style="margin-right: 10px;">🗘   Refresh</button>
-  <button onclick="save()">💾   Save</button>
   </div>`;
 }
 
@@ -202,12 +206,13 @@ function translationsEditorBody(): string {
 
   return `<tbody>
 ${Object.keys(translationTable)
-  .map((k) => {
+  .map((k, iKey) => {
     return `<tr><td>${k}</td>${(translationTable[k] as string[])
-      .map((t) => {
-        return `<td><input class="${
-          t === "" ? "empty" : ""
-        }" value="${t}"/></td>`;
+      .map((t, iLang) => {
+        return `<td><input id="${iKey}" name="${iLang}"
+        onblur="onInputBlur(event)" 
+        class="${t === "" ? "empty" : ""}" 
+        value="${t}"/></td>`;
       })
       .join("")}</tr>`;
   })
@@ -217,11 +222,18 @@ ${Object.keys(translationTable)
 
 function translationsEditorScript(): string {
   return `<script>
+  const vscode = acquireVsCodeApi();
   function refresh() {
-      const vscode = acquireVsCodeApi();
-      vscode.postMessage({
-          command: 'refresh'
-      })
+    vscode.postMessage({
+        command: 'refresh'
+    })
+  }
+  function onInputBlur(e) {
+    vscode.postMessage({
+        command: 'change',
+        keyIndex: e.target.id,
+        langIndex: e.target.name
+    })
   }
 </script>`;
 }
@@ -250,7 +262,7 @@ function translationsEditorStyle(): string {
     font-size: 12px;
   }
   input.empty {
-    background: #91293a
+    background: rgba(255,0,0,0.35)
   }
   input:focus {
     color: #FFFFFF;
@@ -401,33 +413,36 @@ function commandCreateTranslationFromSelection(): vscode.Disposable {
                 (result) => {
                   // if key name is not null or empty
                   if (result !== undefined && result?.trim() !== "") {
-                    const translationsCopy = [...translations];
+                    const tCopy = [...translations];
+
                     // append the translation to all translation files
-                    for (let i = 0; i < translationsCopy.length; i++) {
-                      const translation = translationsCopy[i];
-                      translation[result] = selection;
-                      writeFile(
-                        translationFiles[i],
-                        JSON.stringify(translation, null, 2),
-                        (error) => {
-                          if (error) {
-                            vscode.window.showErrorMessage(error.message);
-                            write(error.message);
-                          } else {
-                            // replace selection with the generated key
-                            editor.edit((edit) => {
-                              edit.replace(
-                                selectionRange,
-                                getTranslationTemplate(result)
-                              );
-                            });
-                            vscode.window.showInformationMessage(
-                              `Created translation key '${result}' for '${selection}'`
-                            );
-                          }
-                        }
-                      );
+                    for (let i = 0; i < tCopy.length; i++) {
+                      tCopy[i][result] = selection;
                     }
+
+                    const itemOpenFiles = "Open translation files";
+                    writeChanges(tCopy, () => {
+                      editor.edit((edit) => {
+                        edit.replace(
+                          selectionRange,
+                          getTranslationTemplate(result)
+                        );
+                      });
+                      vscode.window
+                        .showInformationMessage(
+                          `Created translation key '${result}' for '${selection}'`,
+                          itemOpenFiles
+                        )
+                        .then((selection) => {
+                          switch (selection) {
+                            case itemOpenFiles:
+                              openTranslationFiles()
+                                .then((result) => {})
+                                .catch((error) => {});
+                              break;
+                          }
+                        });
+                    });
                   }
                 },
                 (error) => {
@@ -601,4 +616,21 @@ function getTranslationTemplate(key: string): string {
 
 function toSnakeCase(value: string): string {
   return value.replace("  ", " ").replace(" ", "_").toLowerCase().trim();
+}
+
+function writeChanges(changes: any[], onComplete: () => void) {
+  for (let i = 0; i < changes.length; i++) {
+    writeFile(
+      translationFiles[i],
+      JSON.stringify(changes[i], null, 2),
+      (error) => {
+        if (error) {
+          vscode.window.showErrorMessage(error.message);
+          write(error.message);
+        } else {
+          onComplete();
+        }
+      }
+    );
+  }
 }
