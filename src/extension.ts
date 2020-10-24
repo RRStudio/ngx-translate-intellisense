@@ -12,8 +12,6 @@ import * as path from "path";
 import * as vscode from "vscode";
 import * as md5 from "md5";
 
-// TODO: translations editor - auto focus last entry
-// TODO: translations editor - delete entry
 // TODO: add problem for each key that isn't translated
 // TODO: highlight translate string pipe that is invalid (no such key error)
 
@@ -176,6 +174,14 @@ function commandOpenTranslationsEditor(
                 }
                 writeChanges(translations, () => {});
                 break;
+              case "delete":
+                for (let i = 0; i < translations.length; i++) {
+                  try {
+                    delete translations[i][key];
+                  } catch (e) {}
+                }
+                writeChanges(translations, () => {});
+                break;
             }
           },
           undefined,
@@ -202,7 +208,7 @@ ${languages
   .map((lang) => {
     return `<th>${lang.toUpperCase()}</th>`;
   })
-  .join("")}</tr>
+  .join("")}<th></th></tr>
 </thead>`;
 }
 
@@ -242,7 +248,11 @@ ${Object.keys(translationTable)
         }
         /></td>`;
       })
-      .join("")}</tr>`;
+      .join("")}
+      <td>
+      <button class="iconbutton" title="Delete '${key}'" onclick="deleteKey('${key}')">🗑️</button>
+      </td>
+      </tr>`;
   })
   .join("")}
   ${translationsEditorRefocusScript()}
@@ -286,6 +296,12 @@ function translationsEditorScript(): string {
         command: 'new'
     })
   }
+  function deleteKey(key) {
+    vscode.postMessage({
+        command: 'delete',
+        key: key
+    })
+  }
 </script>`;
 }
 
@@ -293,6 +309,14 @@ function translationsEditorStyle(): string {
   return `<style>
   body {
     padding: 20px;
+  }
+
+  .iconbutton {
+    user-select: none;
+    cursor: pointer;
+    border: 0;
+    padding: 0px;
+    height: auto;
   }
 
   button {
