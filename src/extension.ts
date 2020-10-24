@@ -155,7 +155,13 @@ function commandOpenTranslationsEditor(
                 refreshTranslationsEditor();
                 return;
               case "change":
-                vscode.window.showInformationMessage("change");
+                const { key, langIndex, value } = message;
+                // if value is new
+                if (translations[langIndex][key] !== value) {
+                  // write change
+                  translations[langIndex][key] = value;
+                  writeChanges(translations, () => {});
+                }
                 return;
             }
           },
@@ -206,10 +212,10 @@ function translationsEditorBody(): string {
 
   return `<tbody>
 ${Object.keys(translationTable)
-  .map((k, iKey) => {
-    return `<tr><td>${k}</td>${(translationTable[k] as string[])
+  .map((key) => {
+    return `<tr><td>${key}</td>${(translationTable[key] as string[])
       .map((t, iLang) => {
-        return `<td><input id="${iKey}" name="${iLang}"
+        return `<td><input id="${key}" name="${iLang}"
         onblur="onInputBlur(event)" 
         class="${t === "" ? "empty" : ""}" 
         value="${t}"/></td>`;
@@ -231,8 +237,9 @@ function translationsEditorScript(): string {
   function onInputBlur(e) {
     vscode.postMessage({
         command: 'change',
-        keyIndex: e.target.id,
-        langIndex: e.target.name
+        key: e.target.id,
+        langIndex: e.target.name,
+        value: e.target.value
     })
   }
 </script>`;
@@ -258,14 +265,14 @@ function translationsEditorStyle(): string {
   input{
     width: 99%;
     background: transparent;
-    color: #CCCCCC;
+    color: rgba(255,255,255,0.75);
     font-size: 12px;
   }
   input.empty {
-    background: rgba(255,0,0,0.35)
+    background: rgba(255,0,0,0.25)
   }
   input:focus {
-    color: #FFFFFF;
+    color: #fff;
   }
 
   table {
@@ -274,27 +281,28 @@ function translationsEditorStyle(): string {
     border-collapse: collapse;
   }
   table td, table th {
-    border: 1px solid #AAAAAA;
+    border: 1px solid rgba(255,255,255,0.5);
+  }
+  table td {
     padding: 2px 4px;
   }
   table tbody td {
     font-size: 12px;
   }
   table tr:nth-child(even) {
-    background: rgba(#000, 0.5);
+    background: rgba(0,0,0,0.15)
   }
   table thead {
-    border-bottom: 2px solid #AAAAAA;
+    border-bottom: 2px solid rgba(255,255,255,0.5);
   }
   table thead th {
     font-size: 12px;
     font-weight: bold;
-    color: #FFFFFF;
+    color: #fff;
     text-align: left;
-    border-left: 2px solid #AAAAAA;
-  }
-  table thead th:first-child {
-    border-left: none;
+    border-left: 2px solid rgba(255,255,255,0.5);
+    background: rgba(0,0,0,0.35);
+    padding: 2px 4px;
   }
 </style>`;
 }
