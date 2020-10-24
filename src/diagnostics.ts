@@ -8,6 +8,7 @@ export function init(): vscode.DiagnosticCollection {
   diagnosticCollection = vscode.languages.createDiagnosticCollection(
     "ngx-translation-intellisense"
   );
+  return diagnosticCollection;
 }
 
 export function run(doc: vscode.TextDocument): void {
@@ -44,7 +45,7 @@ function createDiagnostic(
   doc: vscode.TextDocument,
   text: string,
   position: vscode.Position
-): vscode.Diagnostic {
+): vscode.Diagnostic | null {
   const range = doc.getWordRangeAtPosition(
     position,
     constants.REGEXP_TRANSLATE_PIPE
@@ -54,14 +55,18 @@ function createDiagnostic(
   const secondQuote = text.lastIndexOf("'");
   const key = text.substring(firstQuote + 1, secondQuote);
 
-  return diagnoseTranslationKey(range, key);
+  if (range) {
+    return diagnoseTranslationKey(range, key);
+  } else {
+    return null;
+  }
 }
 
 function diagnoseTranslationKey(
   range: vscode.Range,
   key: string
-): vscode.Diagnostic {
-  const missingLanguages = [];
+): vscode.Diagnostic | null {
+  const missingLanguages: string[] = [];
   translations.forEach((t, i) => {
     if (t[key] === undefined || t[key].trim() === "") {
       missingLanguages.push(languages[i]);

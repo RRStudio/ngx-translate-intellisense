@@ -294,17 +294,10 @@ function watchTranslationFileChanges() {
   translationFileWatches.forEach((t) => {
     t.close();
   });
-  let md5Previous = null;
-  let fsWait = false;
+  let md5Previous: string = "";
   translationFileWatches = translationFiles.map((f) => {
     return watch(f, (event, filename) => {
       if (filename) {
-        if (fsWait) {
-          return;
-        }
-        fsWait = setTimeout(() => {
-          fsWait = false;
-        }, 100);
         const md5Current = md5(readFileSync(f));
         if (md5Current === md5Previous) {
           return;

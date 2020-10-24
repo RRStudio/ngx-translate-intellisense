@@ -7,12 +7,14 @@ import {
 } from "./extension";
 import * as util from "./util";
 
-let translationsEditorWebViewPanel: vscode.WebviewPanel = null;
-let lastFocus = null;
+let translationsEditorWebViewPanel: vscode.WebviewPanel | null = null;
+let lastFocus: { key: string; langIndex: number } | null = null;
 
 export function refresh() {
   try {
-    translationsEditorWebViewPanel?.webview.html = getTranslationEditorContent();
+    if (translationsEditorWebViewPanel) {
+      translationsEditorWebViewPanel.webview.html = getTranslationEditorContent();
+    }
   } catch (e) {
     util.write(e);
   }
@@ -90,7 +92,7 @@ function translationsEditorHead(): string {
 }
 
 function translationsEditorBody(): string {
-  const translationTable = {};
+  const translationTable: { [key: string]: string[] } = {};
   translations.forEach((t) => {
     Object.keys(t).forEach((k) => {
       if (translationTable[k] === undefined) {
