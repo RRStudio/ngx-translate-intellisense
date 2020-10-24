@@ -11,26 +11,21 @@ import {
 import * as path from "path";
 import * as vscode from "vscode";
 import * as md5 from "md5";
+import {
+  PACKAGE_NAME,
+  REGEXP_TRANSLATE_PIPE,
+  COMPLETION_ITEM_PREFIX,
+  FILE_SELECTOR,
+} from "./constants";
+import { SETTINGS_FOLDER_NAME, SETTINGS_FILE_EXTENSION } from "./settings";
+import { diagnose, initDiagnostics } from "./diagnostics";
 
-// TODO: add problem for each key that isn't translated
-// TODO: highlight translate string pipe that is invalid (no such key error)
+// TODO: refactor
 
-const NAME = "ngx-translate-intellisense";
-const selector = [
-  {
-    scheme: "file",
-    language: "html",
-  },
-];
-const completionPrefix = "t:";
-
-const translationsFolderName = "i18n";
-const translationFileExtension = "json";
-
-let translationFiles: string[] = [];
-let translationFileWatches: FSWatcher[] = [];
-let translations: any[] = [];
-let languages: string[] = [];
+export let translationFiles: string[] = [];
+export let translationFileWatches: FSWatcher[] = [];
+export let translations: any[] = [];
+export let languages: string[] = [];
 
 let output: vscode.OutputChannel;
 let dirs: string[] = [];
@@ -42,10 +37,13 @@ function write(message: string) {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-  output = vscode.window.createOutputChannel(NAME);
+  output = vscode.window.createOutputChannel(PACKAGE_NAME);
   indexTranslations()
     .then((result) => {})
     .catch((error) => {});
+
+  const diagnosticCollection = initDiagnostics();
+  subscribeToDocumentChanges(context);
 
   context.subscriptions.push(
     hoverTranslations(),
@@ -53,15 +51,40 @@ export function activate(context: vscode.ExtensionContext) {
     commandUpdateTranslations(),
     commandCreateTranslationFromSelection(),
     commandOpenTranslationFiles(),
-    commandOpenTranslationsEditor(context)
+    commandOpenTranslationsEditor(context),
+    diagnosticCollection
   );
 }
 
 // this method is called when your extension is deactivated
 export function deactivate() {}
 
+function subscribeToDocumentChanges(context: vscode.ExtensionContext) {
+  if (vscode.window.activeTextEditor) {
+    diagnose(vscode.window.activeTextEditor.document);
+  }
+
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor((editor) => {
+      if (editor) {
+        diagnose(editor.document);
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeTextDocument((e) => diagnose(e.document))
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidCloseTextDocument((doc) =>
+      diagnosticCollection.delete(doc.uri)
+    )
+  );
+}
+
 function hoverTranslations(): vscode.Disposable {
-  return vscode.languages.registerHoverProvider(selector, {
+  return vscode.languages.registerHoverProvider(FILE_SELECTOR, {
     provideHover(
       document: vscode.TextDocument,
       position: vscode.Position,
@@ -72,7 +95,7 @@ function hoverTranslations(): vscode.Disposable {
       } else {
         const foundRange = document.getWordRangeAtPosition(
           position,
-          new RegExp(/[',"].*[',"]\s\|\stranslate/g)
+          REGEXP_TRANSLATE_PIPE
         );
         if (foundRange !== undefined) {
           const text = document.getText(foundRange);
@@ -90,7 +113,7 @@ function hoverTranslations(): vscode.Disposable {
 }
 
 function translationCompletions(): vscode.Disposable {
-  return vscode.languages.registerCompletionItemProvider(selector, {
+  return vscode.languages.registerCompletionItemProvider(FILE_SELECTOR, {
     provideCompletionItems(
       document: vscode.TextDocument,
       position: vscode.Position,
@@ -105,7 +128,7 @@ function translationCompletions(): vscode.Disposable {
           if (defaultTranslation.hasOwnProperty(key)) {
             return {
               kind: vscode.CompletionItemKind.Constant,
-              label: completionPrefix + key,
+              label: COMPLETION_ITEM_PREFIX + key,
               insertText: getTranslationTemplate(key),
               detail: `Translation for '${key}'`,
               documentation: getDocumentationForTranslation(key),
@@ -135,7 +158,7 @@ function commandOpenTranslationsEditor(
   context: vscode.ExtensionContext
 ): vscode.Disposable {
   return vscode.commands.registerCommand(
-    `${NAME}.openTranslationsEditor`,
+    `${PACKAGE_NAME}.openTranslationsEditor`,
     async () => {
       try {
         translationsEditorWebViewPanel = vscode.window.createWebviewPanel(
@@ -262,8 +285,8 @@ ${Object.keys(translationTable)
 function translationsEditorRefocusScript() {
   return lastFocus !== null
     ? `<script> 
-  const selector = '#${lastFocus.key}[name="${lastFocus.langIndex}"]'
-  document.querySelector(selector).focus()
+  const FILE_SELECTOR = '#${lastFocus.key}[name="${lastFocus.langIndex}"]'
+  document.querySelector(FILE_SELECTOR).focus()
   </script>`
     : "";
 }
@@ -403,7 +426,7 @@ ${translationsEditorScript()}
 
 function commandOpenTranslationFiles(): vscode.Disposable {
   return vscode.commands.registerCommand(
-    `${NAME}.openTranslationFiles`,
+    `${PACKAGE_NAME}.openTranslationFiles`,
     async () => {
       try {
         await openTranslationFiles();
@@ -417,7 +440,7 @@ function commandOpenTranslationFiles(): vscode.Disposable {
 
 function commandUpdateTranslations(): vscode.Disposable {
   return vscode.commands.registerCommand(
-    `${NAME}.updateTranslations`,
+    `${PACKAGE_NAME}.updateTranslations`,
     async () => {
       try {
         vscode.window.showInformationMessage("Updating translations");
@@ -442,7 +465,7 @@ function commandUpdateTranslations(): vscode.Disposable {
 
 function commandCreateTranslationFromSelection(): vscode.Disposable {
   return vscode.commands.registerCommand(
-    `${NAME}.createTranslationFromSelection`,
+    `${PACKAGE_NAME}.createTranslationFromSelection`,
     async () => {
       try {
         if (isNotIndexed()) {
@@ -571,7 +594,7 @@ async function indexTranslations() {
   translationFiles = await getTranslationFiles();
   watchTranslationFileChanges();
   languages = translationFiles.map((f) => {
-    return path.basename(f, "." + translationFileExtension);
+    return path.basename(f, "." + SETTINGS_FILE_EXTENSION);
   });
   translations = await Promise.all(
     translationFiles.map((f) => {
@@ -581,6 +604,9 @@ async function indexTranslations() {
 
   if (!isNotIndexed()) {
     refreshTranslationsEditor();
+    if (vscode.window.activeTextEditor) {
+      diagnose(vscode.window.activeTextEditor.document);
+    }
   }
 }
 
@@ -597,15 +623,15 @@ async function getTranslationFiles(): Promise<string[]> {
         await listDirectoriesRecursive(f.uri.fsPath + "/src");
       }
       dirs = dirs.filter((d) => {
-        return d.endsWith(translationsFolderName);
+        return d.endsWith(SETTINGS_FOLDER_NAME);
       });
       if (dirs.length > 0) {
         const dir = dirs[0];
-        write(`found ${translationsFolderName} directory (${dir})...`);
+        write(`found ${SETTINGS_FOLDER_NAME} directory (${dir})...`);
         write("searching for a translation file...");
         let translationFiles = await listFiles(dir);
         translationFiles = translationFiles.filter((f) => {
-          return f.endsWith("." + translationFileExtension);
+          return f.endsWith("." + SETTINGS_FILE_EXTENSION);
         });
         return translationFiles;
       }
@@ -684,7 +710,7 @@ async function openTranslationFiles() {
   }
 }
 
-function isNotIndexed(): boolean {
+export function isNotIndexed(): boolean {
   return translationFiles.length === 0 || translations.length === 0;
 }
 
