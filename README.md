@@ -1,4 +1,4 @@
-# ngx-translate-intellisense VsCode extension
+# ngx-translate-intellisense
 
 Enhance your ngx-translate workflows.
 
@@ -103,6 +103,10 @@ All contributions to this project are welcome :)
 
 ## Release Notes
 
-######0.0.1 (25/10/2020)
+#### 0.0.1 (25/10/2020)
 
 - First release
+
+#### 0.0.3 (25/10/2020)
+
+- Minor improvements and documentation fixes
