@@ -35,9 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
   subscribeToDocumentChanges(context);
   context.subscriptions.push(diagnosticCollection);
 
-  activityBarEditorProvider = new translationsEditor.WebViewProvider(
-    context.extensionUri
-  );
+  activityBarEditorProvider = new translationsEditor.WebViewProvider(context);
 
   context.subscriptions.push(
     hoverTranslations(),
@@ -353,14 +351,13 @@ async function getTranslationFiles(): Promise<string[]> {
       for (const f of folders) {
         await listDirectoriesRecursive(f.uri.fsPath + "/src");
       }
+      const folder = settings.translationsFolder();
       dirs = dirs.filter((d) => {
-        return d.endsWith(settings.translationsFolder());
+        return d.endsWith(folder);
       });
       if (dirs.length > 0) {
         const dir = dirs[0];
-        util.write(
-          `found ${settings.translationsFolder()} directory (${dir})...`
-        );
+        util.write(`found ${folder} directory (${dir})...`);
         util.write("searching for a translation file...");
         let translationFiles = await listFiles(dir);
         translationFiles = translationFiles.filter((f) => {
@@ -400,7 +397,7 @@ async function listDirectoriesRecursive(dir: string) {
   const filePathsAndIsDirectoryFlags = await Promise.all(
     filePathsAndIsDirectoryFlagsPromises
   );
-  const _dirs = filePathsAndIsDirectoryFlags
+  const _dirs: string[] = filePathsAndIsDirectoryFlags
     .filter(
       (filePathAndIsDirectoryFlag) => filePathAndIsDirectoryFlag.isDirectory
     )

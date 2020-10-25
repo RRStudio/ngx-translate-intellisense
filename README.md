@@ -1,6 +1,6 @@
 # ngx-translate-intellisense VsCode extension
 
-######Enhance your ngx-translate workflows.
+Enhance your ngx-translate workflows.
 
 ---
 

@@ -13,25 +13,25 @@ let lastFocus: {
 export class WebViewProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
 
-  constructor(private readonly _extensionUri: vscode.Uri) {}
+  constructor(private readonly context: vscode.ExtensionContext) {}
 
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
-    context: vscode.WebviewViewResolveContext,
+    context: vscode.WebviewViewResolveContext<vscode.ExtensionContext>,
     _token: vscode.CancellationToken
   ) {
     this._view = webviewView;
 
     webviewView.webview.options = {
       enableScripts: true,
-      localResourceRoots: [this._extensionUri],
+      localResourceRoots: [this.context.extensionUri],
     };
 
     setWebViewContent(webviewView.webview);
     webviewView.webview.onDidReceiveMessage(
       onDidReceiveMessageListener,
       undefined,
-      context.subscriptions
+      this.context.subscriptions
     );
   }
 
@@ -90,7 +90,12 @@ function setWebViewContent(view: vscode.Webview) {
   }
 }
 
-const onDidReceiveMessageListener = (message) => {
+const onDidReceiveMessageListener = (message: {
+  command: string;
+  key: string;
+  langIndex: number;
+  value: string;
+}) => {
   const { command, key, langIndex, value } = message;
   switch (command) {
     case "refresh":
@@ -120,11 +125,10 @@ const onDidReceiveMessageListener = (message) => {
       }
       break;
     case "focus":
-      if (lastFocus === null) {
-        lastFocus = {};
-      }
-      lastFocus.key = key;
-      lastFocus.langIndex = +langIndex;
+      lastFocus = {
+        key: key,
+        langIndex: +langIndex,
+      };
       break;
     case "new":
       for (let i = 0; i < extension.translations.length; i++) {
