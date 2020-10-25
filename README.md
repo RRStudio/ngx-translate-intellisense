@@ -66,8 +66,6 @@ The extension automatically indexes all translation files. If the above warning 
 | Open translations editor          | Windows: `Ctrl+T Ctrl+E` <br/> Mac: `Cmd+T Cmd+E` | Opens the translation editor in a new tab             |
 | Open translation files            | Windows: `Ctrl+T Ctrl+O` <br/> Mac: `Cmd+T Cmd+O` | Opens all indexed translation files in new columns    |
 
-<!--- * `myExtension.enable`: enable/disable this extension
-
 ## Settings
 
 Settings are currently not provided
@@ -76,8 +74,6 @@ Settings are currently not provided
 | ----------------------------------------- | ------- | ------- | ----------------------------------------------- |
 | ng-translate-intellisense.isEnable        | boolean | true    | Toggle the highlight, default is true.          |
 | ng-translate-intellisense.isCaseSensitive | boolean | true    | Whether the keywords are case sensitive or not. | -->
-
-<!--- * `myExtension.enable`: enable/disable this extension -->
 
 ## Known Issues
 
