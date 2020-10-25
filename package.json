@@ -81,7 +81,21 @@
         "key": "ctrl+t ctrl+e",
         "mac": "cmd+t cmd+e"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "ngx-translate-intellisense",
+      "properties": {
+        "ng-translate-intellisense.translationsFolder": {
+          "title": "Translations Folder",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "i18n",
+          "markdownDescription": "ng-translate-intellisense.translationsFolder | string | i18n    | Specifies the translations folder name to index. The folder name should **not** be a path. After changing this, it is recommended to execute the `Update translations` command"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

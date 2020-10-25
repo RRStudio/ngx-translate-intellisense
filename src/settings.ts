@@ -1,4 +1,8 @@
-// TODO: implement in settings
+import * as vscode from "vscode";
 
-export const FOLDER_NAME = "i18n";
+const configuration = vscode.workspace.getConfiguration();
+
+export function translationsFolder(): string | undefined {
+  return configuration.get("ng-translate-intellisense.translationsFolder");
+}
 export const FILE_EXTENSION = "json";

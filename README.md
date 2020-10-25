@@ -89,12 +89,9 @@ The extension currently provides these diagnostics:
 
 ## Settings
 
-Settings are currently not provided
-
-<!-- |                                           | type    | default | description                                     |
-| ----------------------------------------- | ------- | ------- | ----------------------------------------------- |
-| ng-translate-intellisense.isEnable        | boolean | true    | Toggle the highlight, default is true.          |
-| ng-translate-intellisense.isCaseSensitive | boolean | true    | Whether the keywords are case sensitive or not. | -->
+|                                              | Type   | Default | Description                                                                                                                                                                    |
+| -------------------------------------------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ng-translate-intellisense.translationsFolder | string | i18n    | Specifies the translations folder name to index. The folder name should **not** be a path. After changing this, it is recommended to execute the `Update translations` command |
 
 ## Known Issues
 

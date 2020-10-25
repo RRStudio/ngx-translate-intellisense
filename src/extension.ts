@@ -354,11 +354,13 @@ async function getTranslationFiles(): Promise<string[]> {
         await listDirectoriesRecursive(f.uri.fsPath + "/src");
       }
       dirs = dirs.filter((d) => {
-        return d.endsWith(settings.FOLDER_NAME);
+        return d.endsWith(settings.translationsFolder());
       });
       if (dirs.length > 0) {
         const dir = dirs[0];
-        util.write(`found ${settings.FOLDER_NAME} directory (${dir})...`);
+        util.write(
+          `found ${settings.translationsFolder()} directory (${dir})...`
+        );
         util.write("searching for a translation file...");
         let translationFiles = await listFiles(dir);
         translationFiles = translationFiles.filter((f) => {
