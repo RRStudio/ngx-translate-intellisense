@@ -1,7 +1,7 @@
 {
   "name": "ngx-translate-intellisense",
   "displayName": "ngx-translate-intellisense",
-  "description": "Provides easy-to-use intellisense for the ngx-translate package",
+  "description": "Enhance your ngx-translate workflows",
   "version": "0.0.1",
   "publisher": "RRStudio",
   "engines": {
