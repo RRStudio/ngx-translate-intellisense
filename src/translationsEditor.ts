@@ -1,16 +1,14 @@
 import * as vscode from "vscode";
-import {
-  translations,
-  languages,
-  writeChanges,
-  isNotIndexed,
-} from "./extension";
+import * as extension from "./extension";
 import * as util from "./util";
 
 export const id = "translations-editor-webview";
 
 let translationsEditorWebViewPanel: vscode.WebviewPanel | null = null;
-let lastFocus: { key: string; langIndex: number } | null = null;
+let lastFocus: {
+  key: string;
+  langIndex: number;
+} | null = null;
 
 export class WebViewProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
@@ -98,28 +96,49 @@ const onDidReceiveMessageListener = (message) => {
     case "refresh":
       refresh();
       break;
+    case "changeKey":
+      const previousValues: string[] = [];
+      for (const t of extension.translations) {
+        if (t[value] !== undefined) {
+          // this key already exists
+          return;
+        } else {
+          previousValues.push(t[key] ?? "");
+        }
+      }
+      extension.translations.forEach((t, i) => {
+        delete t[key];
+        t[value] = previousValues[i];
+      });
+
+      extension.writeChanges(extension.translations, () => {});
+      break;
     case "change":
-      if (translations[langIndex][key] !== value) {
-        translations[langIndex][key] = value;
-        writeChanges(translations, () => {});
+      if (extension.translations[langIndex][key] !== value) {
+        extension.translations[langIndex][key] = value;
+        extension.writeChanges(extension.translations, () => {});
       }
       break;
     case "focus":
-      lastFocus = { key, langIndex: +langIndex };
+      if (lastFocus === null) {
+        lastFocus = {};
+      }
+      lastFocus.key = key;
+      lastFocus.langIndex = +langIndex;
       break;
     case "new":
-      for (let i = 0; i < translations.length; i++) {
-        translations[i]["__temp"] = "";
+      for (let i = 0; i < extension.translations.length; i++) {
+        extension.translations[i]["__temp"] = "";
       }
-      writeChanges(translations, () => {});
+      extension.writeChanges(extension.translations, () => {});
       break;
     case "delete":
-      for (let i = 0; i < translations.length; i++) {
+      for (let i = 0; i < extension.translations.length; i++) {
         try {
-          delete translations[i][key];
+          delete extension.translations[i][key];
         } catch (e) {}
       }
-      writeChanges(translations, () => {});
+      extension.writeChanges(extension.translations, () => {});
       break;
   }
 };
@@ -133,7 +152,7 @@ function translationsEditorButtons(): string {
 function translationsEditorHead(): string {
   return `<thead><tr>
   <th>#</th>
-  ${languages
+  ${extension.languages
     .map((lang) => {
       return `<th>${lang.toUpperCase()}</th>`;
     })
@@ -143,7 +162,7 @@ function translationsEditorHead(): string {
 
 function translationsEditorBody(): string {
   const translationTable: { [key: string]: string[] } = {};
-  translations.forEach((t) => {
+  extension.translations.forEach((t) => {
     Object.keys(t).forEach((k) => {
       if (translationTable[k] === undefined) {
         translationTable[k] = [];
@@ -153,23 +172,35 @@ function translationsEditorBody(): string {
   });
 
   Object.keys(translationTable).forEach((k) => {
-    for (let i = 0; i < languages.length - translationTable[k].length; i++) {
+    for (
+      let i = 0;
+      i < extension.languages.length - translationTable[k].length;
+      i++
+    ) {
       translationTable[k].push("");
     }
   });
 
   return `<tbody>
   ${Object.keys(translationTable)
-    .map((key) => {
-      return `<tr><td>${key}</td>${(translationTable[key] as string[])
-        .map((t, iLang) => {
-          return `<td><input id="${key}" name="${iLang}"
+    .map((key, iKey) => {
+      return `<tr>
+        <td>
+          <input id="${key}" name="${iKey}"
+          onblur="onKeyInputBlur(event)"
+          onfocus="onInputFocus(event)"
+          class="${key === "" ? "empty" : ""}"
+          minlength="1"
+          value="${key}" />
+        </td>${(translationTable[key] as string[])
+          .map((t, iLang) => {
+            return `<td><input id="${key}" name="${iLang}"
           onblur="onInputBlur(event)"
           onfocus="onInputFocus(event)"
           class="${t === "" ? "empty" : ""}" 
           value="${t}" /></td>`;
-        })
-        .join("")}
+          })
+          .join("")}
         <td>
         <button class="iconbutton" title="Delete '${key}'" onclick="deleteKey('${key}')">🗑️</button>
         </td>
@@ -184,7 +215,8 @@ function translationsEditorRefocusScript() {
   return lastFocus !== null
     ? `<script> 
     const selector = '#${lastFocus.key}[name="${lastFocus.langIndex}"]'
-    document.querySelector(selector).focus()
+    const lastFocusedInput = document.querySelector(selector)
+    lastFocusedInput.focus()
     </script>`
     : "";
 }
@@ -192,9 +224,17 @@ function translationsEditorRefocusScript() {
 function translationsEditorScript(): string {
   return `<script>
     const vscode = acquireVsCodeApi();
+
     function refresh() {
       vscode.postMessage({
           command: 'refresh'
+      })
+    }
+    function onKeyInputBlur(e) {
+      vscode.postMessage({
+          command: 'changeKey',
+          key: e.target.id,
+          value: e.target.value
       })
     }
     function onInputBlur(e) {
@@ -209,7 +249,7 @@ function translationsEditorScript(): string {
       vscode.postMessage({
           command: 'focus',
           key: e.target.id,
-          langIndex: e.target.name,
+          langIndex: e.target.name
       })
     }
     function addNew() {
@@ -308,7 +348,7 @@ function getTranslationEditorContent() {
   </head>
   <body>
   ${
-    isNotIndexed()
+    extension.isNotIndexed()
       ? "Indexing translations..."
       : `${translationsEditorButtons()}<br/><br/>
       <table>
