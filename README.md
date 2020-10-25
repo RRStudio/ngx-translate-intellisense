@@ -54,7 +54,13 @@ The extension automatically indexes all translation files. If the above warning 
 
 ### Translations editor
 
-- dsadsa
+- Open the translations view either by using the provided `Translations Editor` activity bar view, or by executing the `Open translations editor` command
+  ![Open editor demo](docs/demo_open_editor.gif)
+- The editor displays all your translations in a table, order by `Key` -> `Languages`, and will update automatically when changes to the translation files are made
+  - If this is not the case, to fix this issue either click the `Refresh` button or execute the `Update translations` command
+- You can now live edit all translation keys and values. `NOTE: empty values wlil be marked in red`
+- To create a new entry, click the `+ New` button at the bottom of the table
+- To delete a translation, click the `🗑️` button at the end of its row
 
 ### Autocomplete translations
 
