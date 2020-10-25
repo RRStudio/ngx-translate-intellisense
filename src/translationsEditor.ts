@@ -167,15 +167,7 @@ function translationsEditorBody(): string {
           onblur="onInputBlur(event)"
           onfocus="onInputFocus(event)"
           class="${t === "" ? "empty" : ""}" 
-          value="${t}"
-          ${
-            lastFocus !== null &&
-            lastFocus.key === key &&
-            lastFocus.langIndex === iLang
-              ? "autofocus"
-              : ""
-          }
-          /></td>`;
+          value="${t}" /></td>`;
         })
         .join("")}
         <td>
@@ -191,8 +183,8 @@ function translationsEditorBody(): string {
 function translationsEditorRefocusScript() {
   return lastFocus !== null
     ? `<script> 
-    const constants.FILE_SELECTOR = '#${lastFocus.key}[name="${lastFocus.langIndex}"]'
-    document.querySelector(constants.FILE_SELECTOR).focus()
+    const selector = '#${lastFocus.key}[name="${lastFocus.langIndex}"]'
+    document.querySelector(selector).focus()
     </script>`
     : "";
 }
