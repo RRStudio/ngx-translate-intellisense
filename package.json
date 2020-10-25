@@ -40,6 +40,29 @@
         "command": "ngx-translate-intellisense.openTranslationsEditor",
         "title": "Open translations editor"
       }
+    ],
+    "keybindings": [
+      {
+        "command": "ngx-translate-intellisense.updateTranslations",
+        "key": "ctrl+t ctrl+u",
+        "mac": "cmd+t cmd+u"
+      },
+      {
+        "command": "ngx-translate-intellisense.createTranslationFromSelection",
+        "key": "ctrl+t ctrl+n",
+        "mac": "cmd+t cmd+n",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "ngx-translate-intellisense.openTranslationFiles",
+        "key": "ctrl+t ctrl+o",
+        "mac": "cmd+t cmd+o"
+      },
+      {
+        "command": "ngx-translate-intellisense.openTranslationsEditor",
+        "key": "ctrl+t ctrl+e",
+        "mac": "cmd+t cmd+e"
+      }
     ]
   },
   "scripts": {

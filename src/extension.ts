@@ -17,7 +17,7 @@ import * as diagnostics from "./diagnostics";
 import * as util from "./util";
 import * as translationsEditor from "./translationsEditor";
 
-// TODO: refactor
+// TODO: translations editor view container
 
 export let translationFiles: string[] = [];
 export let translationFileWatches: FSWatcher[] = [];
@@ -46,7 +46,6 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
-// this method is called when your extension is deactivated
 export function deactivate() {}
 
 function subscribeToDocumentChanges(context: vscode.ExtensionContext) {
@@ -172,14 +171,16 @@ function commandUpdateTranslations(): vscode.Disposable {
         vscode.window.showInformationMessage("Updating translations");
         indexTranslations()
           .then((result) => {
-            vscode.window.showInformationMessage(
-              "Updated translations successfully"
-            );
+            if (isNotIndexed()) {
+              vscode.window.showWarningMessage("No translation files found");
+            } else {
+              vscode.window.showInformationMessage(
+                "Updated translations successfully"
+              );
+            }
           })
           .catch((error) => {
-            vscode.window.showInformationMessage(
-              "Failed updating translations"
-            );
+            vscode.window.showWarningMessage("Failed updating translations");
           });
       } catch (e) {
         vscode.window.showErrorMessage(e);
