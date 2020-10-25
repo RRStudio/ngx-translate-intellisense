@@ -2,7 +2,7 @@
   "name": "ngx-translate-intellisense",
   "displayName": "ngx-translate-intellisense",
   "description": "Enhance your ngx-translate workflows",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "RRStudio",
   "engines": {
     "vscode": "^1.50.0"
