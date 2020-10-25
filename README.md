@@ -24,6 +24,7 @@
 - Automatic indexing of translation files
 - Easy-to-use translations editor
 - Autocomplete for translations
+- Translation information when hovering over a translation
 - Create translations on the fly
 - Catch untranslated or incomplete translations
 
@@ -57,18 +58,26 @@ The extension automatically indexes all translation files. If the above warning 
 
 ### Autocomplete translations
 
-- dsadsa
+![Translation autocomplete demo](docs/demo_autocomplete.gif)
+
+- To get translation autocomplete suggestions, type `t:` (all suggestions are prefixed with `t:`)
+- Choose the desired value, and the translation pipe will be filled for you
 
 ### Diagnose translation problems
 
-- dsadsa
+The extension currently provides these diagnostics:
+
+|                           | Type    | Description                                                             | Suggested action                                       |
+| ------------------------- | ------- | ----------------------------------------------------------------------- | ------------------------------------------------------ |
+| key-doesnt-exist          | Error   | The target translation key doesn't exist                                | Create the translation key                             |
+| key-not-fully-implemented | Warning | The target translation key isn't implemented in the described languages | Implement the translation key in the missing languages |
 
 ## Commands
 
-|                                   | Keybinding                                        | description                                                                                                                                                                     |
+|                                   | Keybinding                                        | Description                                                                                                                                                                     |
 | --------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Update translations               | Windows: `Ctrl+T Ctrl+U` <br/> Mac: `Cmd+T Cmd+U` | Updates and indexes all translations                                                                                                                                            |
-| Create translation from selection | Windows: `Ctrl+T Ctrl+N` <br/> Mac: `Cmd+T Cmd+N` | Creates a translation from the current text selection. <br /> `Note:` If the translation already exists, the key won't be created and the translation will be filled in for you |
+| Create translation from selection | Windows: `Ctrl+T Ctrl+N` <br/> Mac: `Cmd+T Cmd+N` | Creates a translation from the current text selection. <br /> `NOTE: If the translation already exists, the key won't be created and the translation will be filled in for you` |
 | Open translations editor          | Windows: `Ctrl+T Ctrl+E` <br/> Mac: `Cmd+T Cmd+E` | Opens the translation editor in a new tab                                                                                                                                       |
 | Open translation files            | Windows: `Ctrl+T Ctrl+O` <br/> Mac: `Cmd+T Cmd+O` | Opens all indexed translation files in new columns                                                                                                                              |
 
