@@ -43,7 +43,13 @@ The extension automatically indexes all translation files. If the above warning 
 
 ### Create translations
 
-- dsadsa
+![Translation creation demo](docs/demo_create.gif)
+
+- Write the desired text you want translated
+- Select it, and execute the `Create translation from selection` command
+- A snake_case key will be generated for you, but you can change it to whatever you want
+- Press the enter key to confirm the creation
+- Open the translation files to see your new translation :)
 
 ### Translations editor
 
@@ -59,12 +65,12 @@ The extension automatically indexes all translation files. If the above warning 
 
 ## Commands
 
-|                                   | Keybinding                                        | description                                           |
-| --------------------------------- | ------------------------------------------------- | ----------------------------------------------------- |
-| Update translations               | Windows: `Ctrl+T Ctrl+U` <br/> Mac: `Cmd+T Cmd+U` | Updates and indexes all translations                  |
-| Create translation from selection | Windows: `Ctrl+T Ctrl+N` <br/> Mac: `Cmd+T Cmd+N` | Creates a translation from the current text selection |
-| Open translations editor          | Windows: `Ctrl+T Ctrl+E` <br/> Mac: `Cmd+T Cmd+E` | Opens the translation editor in a new tab             |
-| Open translation files            | Windows: `Ctrl+T Ctrl+O` <br/> Mac: `Cmd+T Cmd+O` | Opens all indexed translation files in new columns    |
+|                                   | Keybinding                                        | description                                                                                                                                                                     |
+| --------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Update translations               | Windows: `Ctrl+T Ctrl+U` <br/> Mac: `Cmd+T Cmd+U` | Updates and indexes all translations                                                                                                                                            |
+| Create translation from selection | Windows: `Ctrl+T Ctrl+N` <br/> Mac: `Cmd+T Cmd+N` | Creates a translation from the current text selection. <br /> `Note:` If the translation already exists, the key won't be created and the translation will be filled in for you |
+| Open translations editor          | Windows: `Ctrl+T Ctrl+E` <br/> Mac: `Cmd+T Cmd+E` | Opens the translation editor in a new tab                                                                                                                                       |
+| Open translation files            | Windows: `Ctrl+T Ctrl+O` <br/> Mac: `Cmd+T Cmd+O` | Opens all indexed translation files in new columns                                                                                                                              |
 
 ## Settings
 
