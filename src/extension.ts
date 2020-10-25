@@ -17,14 +17,13 @@ import * as diagnostics from "./diagnostics";
 import * as util from "./util";
 import * as translationsEditor from "./translationsEditor";
 
-// TODO: translations editor view container
-
 export let translationFiles: string[] = [];
 export let translationFileWatches: FSWatcher[] = [];
 export let translations: any[] = [];
 export let languages: string[] = [];
 
 let dirs: string[] = [];
+let activityBarEditorProvider: translationsEditor.WebViewProvider;
 
 export function activate(context: vscode.ExtensionContext) {
   util.initOutput();
@@ -34,6 +33,11 @@ export function activate(context: vscode.ExtensionContext) {
 
   const diagnosticCollection = diagnostics.init();
   subscribeToDocumentChanges(context);
+  context.subscriptions.push(diagnosticCollection);
+
+  activityBarEditorProvider = new translationsEditor.WebViewProvider(
+    context.extensionUri
+  );
 
   context.subscriptions.push(
     hoverTranslations(),
@@ -42,7 +46,10 @@ export function activate(context: vscode.ExtensionContext) {
     commandCreateTranslationFromSelection(),
     commandOpenTranslationFiles(),
     commandOpenTranslationsEditor(context),
-    diagnosticCollection
+    vscode.window.registerWebviewViewProvider(
+      translationsEditor.id,
+      activityBarEditorProvider
+    )
   );
 }
 
@@ -327,6 +334,7 @@ async function indexTranslations() {
 
   if (!isNotIndexed()) {
     translationsEditor.refresh();
+    activityBarEditorProvider.refresh();
     if (vscode.window.activeTextEditor) {
       diagnostics.run(vscode.window.activeTextEditor.document);
     }

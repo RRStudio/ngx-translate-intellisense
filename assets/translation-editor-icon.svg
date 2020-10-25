@@ -1,0 +1,22 @@
+<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+    <g>
+        <g id="svg_6" stroke="null">
+            <path
+                d="m5.4741,23.01593a2.55118,2.55118 0 0 1 -2.55118,-2.55118l0,-17.0079a2.55118,2.55118 0 0 1 2.55118,-2.55118l5.24853,0a1.70079,1.70079 0 0 1 1.20225,0.49801c2.50264,2.50264 5.14331,5.55738 7.64595,8.06002"
+                fill="none" stroke-linejoin="round" id="svg_4" stroke="currentColor" />
+            <path d="m11.42686,1.33087l0,6.37796a1.70079,1.70079 0 0 0 1.70079,1.70079l6.37796,0" fill="none"
+                stroke-linecap="round" stroke-linejoin="round" id="svg_5" stroke="currentColor" />
+            <line stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" id="svg_24" y2="23.03306"
+                x2="8.12257" y1="23.03306" x1="5.44835" fill-opacity="null" stroke-opacity="null" fill="none" />
+        </g>
+        <g id="svg_12" stroke="null">
+            <path fill="none" stroke-linecap="round" stroke-linejoin="round"
+                d="m11.54521,14.68308l7.62002,0m-3.81001,-1.27l0,1.27m2.11667,8.89002l2.54001,-5.92668l2.54001,5.92668m-4.29949,-1.69334l3.51897,0m-4.05343,-7.19668s-0.64294,2.48709 -2.17753,4.36564s-3.14855,2.83105 -3.14855,2.83105"
+                id="svg_10" stroke="currentColor" />
+            <path d="m17.04856,20.60976s-0.92604,-0.71438 -1.905,-1.98438s-1.48167,-2.24896 -1.48167,-2.24896"
+                fill="none" stroke-linecap="round" stroke-linejoin="round" id="svg_11" stroke="currentColor" />
+        </g>
+        <line stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" id="svg_27" y2="10.95956"
+            x2="19.5479" y1="9.53184" x1="19.50717" fill-opacity="null" stroke-opacity="null" fill="none" />
+    </g>
+</svg>

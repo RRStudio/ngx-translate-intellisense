@@ -7,8 +7,46 @@ import {
 } from "./extension";
 import * as util from "./util";
 
+export const id = "translations-editor-webview";
+
 let translationsEditorWebViewPanel: vscode.WebviewPanel | null = null;
 let lastFocus: { key: string; langIndex: number } | null = null;
+
+export class WebViewProvider implements vscode.WebviewViewProvider {
+  private _view?: vscode.WebviewView;
+
+  constructor(private readonly _extensionUri: vscode.Uri) {}
+
+  public resolveWebviewView(
+    webviewView: vscode.WebviewView,
+    context: vscode.WebviewViewResolveContext,
+    _token: vscode.CancellationToken
+  ) {
+    this._view = webviewView;
+
+    webviewView.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [this._extensionUri],
+    };
+
+    setWebViewContent(webviewView.webview);
+    webviewView.webview.onDidReceiveMessage(
+      onDidReceiveMessageListener,
+      undefined,
+      context.subscriptions
+    );
+  }
+
+  public refresh() {
+    try {
+      if (this._view) {
+        setWebViewContent(this._view.webview);
+      }
+    } catch (e) {
+      util.write(e);
+    }
+  }
+}
 
 export function refresh() {
   try {
@@ -23,7 +61,7 @@ export function refresh() {
 export function open(context: vscode.ExtensionContext) {
   try {
     translationsEditorWebViewPanel = vscode.window.createWebviewPanel(
-      "translationsEditor",
+      id,
       "Translations Editor",
       vscode.ViewColumn.One,
       {
@@ -31,48 +69,60 @@ export function open(context: vscode.ExtensionContext) {
       }
     );
 
-    refresh();
+    setWebViewContent(translationsEditorWebViewPanel.webview);
 
     translationsEditorWebViewPanel.webview.onDidReceiveMessage(
-      (message) => {
-        const { command, key, langIndex, value } = message;
-        switch (command) {
-          case "refresh":
-            refresh();
-            break;
-          case "change":
-            if (translations[langIndex][key] !== value) {
-              translations[langIndex][key] = value;
-              writeChanges(translations, () => {});
-            }
-            break;
-          case "focus":
-            lastFocus = { key, langIndex: +langIndex };
-            break;
-          case "new":
-            for (let i = 0; i < translations.length; i++) {
-              translations[i]["__temp"] = "";
-            }
-            writeChanges(translations, () => {});
-            break;
-          case "delete":
-            for (let i = 0; i < translations.length; i++) {
-              try {
-                delete translations[i][key];
-              } catch (e) {}
-            }
-            writeChanges(translations, () => {});
-            break;
-        }
-      },
+      onDidReceiveMessageListener,
       undefined,
       context.subscriptions
     );
+
+    return translationsEditorWebViewPanel;
   } catch (e) {
     vscode.window.showErrorMessage(e);
     util.write(e);
   }
 }
+
+function setWebViewContent(view: vscode.Webview) {
+  try {
+    view.html = getTranslationEditorContent();
+  } catch (e) {
+    util.write(e);
+  }
+}
+
+const onDidReceiveMessageListener = (message) => {
+  const { command, key, langIndex, value } = message;
+  switch (command) {
+    case "refresh":
+      refresh();
+      break;
+    case "change":
+      if (translations[langIndex][key] !== value) {
+        translations[langIndex][key] = value;
+        writeChanges(translations, () => {});
+      }
+      break;
+    case "focus":
+      lastFocus = { key, langIndex: +langIndex };
+      break;
+    case "new":
+      for (let i = 0; i < translations.length; i++) {
+        translations[i]["__temp"] = "";
+      }
+      writeChanges(translations, () => {});
+      break;
+    case "delete":
+      for (let i = 0; i < translations.length; i++) {
+        try {
+          delete translations[i][key];
+        } catch (e) {}
+      }
+      writeChanges(translations, () => {});
+      break;
+  }
+};
 
 function translationsEditorButtons(): string {
   return `<div style="display: flex;">

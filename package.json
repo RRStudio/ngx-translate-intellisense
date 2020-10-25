@@ -23,6 +23,24 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "translations-editor",
+          "title": "Translations Editor",
+          "icon": "./assets/translation-editor-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "translations-editor": [
+        {
+          "type": "webview",
+          "id": "translations-editor-webview",
+          "name": ""
+        }
+      ]
+    },
     "commands": [
       {
         "command": "ngx-translate-intellisense.updateTranslations",
