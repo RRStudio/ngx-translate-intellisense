@@ -119,13 +119,17 @@ function translationCompletions(): vscode.Disposable {
         if (isNotIndexed()) {
           return null;
         } else {
+          const editor = vscode.window.activeTextEditor;
           const defaultTranslation = translations[0] as Object;
           const items = Object.keys(defaultTranslation).map((key, index) => {
             if (defaultTranslation.hasOwnProperty(key)) {
               return {
                 kind: vscode.CompletionItemKind.Constant,
                 label: constants.COMPLETION_ITEM_PREFIX + key,
-                insertText: util.getTranslationTemplate(key),
+                insertText: util.getTranslationTemplate(
+                  key,
+                  editor?.document?.languageId
+                ),
                 detail: `Translation for '${key}'`,
                 documentation: getDocumentationForTranslation(key),
               };
@@ -223,7 +227,10 @@ function commandCreateTranslationFromSelection(): vscode.Disposable {
                   editor.edit((edit) => {
                     edit.replace(
                       selectionRange,
-                      util.getTranslationTemplate(key)
+                      util.getTranslationTemplate(
+                        key,
+                        editor.document.languageId
+                      )
                     );
                   });
                   vscode.window.showInformationMessage(
@@ -261,7 +268,10 @@ function commandCreateTranslationFromSelection(): vscode.Disposable {
                       editor.edit((edit) => {
                         edit.replace(
                           selectionRange,
-                          util.getTranslationTemplate(result)
+                          util.getTranslationTemplate(
+                            result,
+                            editor.document.languageId
+                          )
                         );
                       });
                       vscode.window

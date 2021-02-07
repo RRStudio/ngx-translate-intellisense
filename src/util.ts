@@ -11,10 +11,26 @@ export function write(message: string) {
   output.appendLine(message);
 }
 
-export function getTranslationTemplate(key: string): string {
-  return `{{ '${key}' | translate }}`;
+export function getTranslationTemplate(
+  key: string,
+  languageId?: string
+): string {
+  if (languageId === "html") {
+    return `{{ '${key}' | translate }}`;
+  } else {
+    return `'${key}'`;
+  }
 }
 
 export function toSnakeCase(value: string): string {
-  return value.replace("  ", " ").replace(" ", "_").toLowerCase().trim();
+  return value
+    .toLowerCase()
+    .replace(/{/g, "")
+    .replace(/}/g, "")
+    .replace(/\s\s+/g, " ")
+    .replace(/[ \t]/g, "_")
+    .replace(/^\`+|\`+$/g, "")
+    .replace(/^\"+|\"+$/g, "")
+    .replace(/^\'+|\'+$/g, "")
+    .trim();
 }
